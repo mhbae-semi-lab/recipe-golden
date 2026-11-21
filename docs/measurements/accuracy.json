@@ -1,0 +1,97 @@
+{
+  "measured": "2026-11-21",
+  "node": "v24.18.0",
+  "set": {
+    "params": 40,
+    "versions": 10,
+    "formats": [
+      "json",
+      "ini",
+      "xml",
+      "csv",
+      "kv"
+    ],
+    "baseline": "v8",
+    "rules": {
+      "tol": [
+        {
+          "pattern": "Optics.FocusOffset",
+          "abs": 0.05,
+          "unit": "um"
+        },
+        {
+          "pattern": "Optics.Exposure",
+          "pct": 2
+        },
+        {
+          "pattern": "Illum.Power",
+          "abs": 2,
+          "unit": "%"
+        },
+        {
+          "pattern": "Illum.Angle",
+          "abs": 0.5,
+          "unit": "deg"
+        },
+        {
+          "pattern": "Detect.Threshold.*",
+          "abs": 2
+        },
+        {
+          "pattern": "Detect.Sensitivity",
+          "abs": 1,
+          "unit": "%"
+        },
+        {
+          "pattern": "Stage.ZOffset",
+          "abs": 0.2,
+          "unit": "um"
+        },
+        {
+          "pattern": "Wafer.Thickness",
+          "pct": 5
+        },
+        {
+          "pattern": "Align.MarkScoreMin",
+          "abs": 0.02
+        }
+      ],
+      "ignore": [
+        "Header.SavedAt",
+        "Header.SavedBy",
+        "*.Comment"
+      ]
+    }
+  },
+  "cases": 162,
+  "judgments": 810,
+  "correct": 810,
+  "accuracy": 1,
+  "confusion": {
+    "pass": {
+      "pass": 325,
+      "block": 0
+    },
+    "block": {
+      "pass": 0,
+      "block": 485
+    }
+  },
+  "blocked": 485,
+  "blockedWithExactReason": 485,
+  "versionIdentification": {
+    "total": 50,
+    "exact": 50
+  },
+  "timing": {
+    "judgmentsMs": 344.9,
+    "perJudgmentMs": 0.426,
+    "bigFile": {
+      "params": 5000,
+      "diffRows": 5001,
+      "nonSame": 53,
+      "ms": 75.2
+    }
+  },
+  "wrong": []
+}

@@ -1,0 +1,12 @@
+{
+  "name": "recipe-golden",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Recipe baseline manager PWA for equipment engineers: file-only baselines, tolerance-aware diff, fleet x version board, staged deploy bundles with rollback. No server.",
+  "type": "module",
+  "license": "MIT",
+  "scripts": {
+    "test": "node --test",
+    "measure": "node tools/measure.mjs"
+  }
+}

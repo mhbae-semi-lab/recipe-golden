@@ -1,0 +1,16 @@
+{
+  "name": "레시피 기준 관리 · Recipe Baseline Manager",
+  "short_name": "Recipe Golden",
+  "description": "레시피 파일만으로 기준 버전 · 장비별 차이 · 1대 시범 → 전체 배포 묶음과 롤백 묶음. Recipe baselines, per-tool diffs, pilot-to-fleet deploy and rollback bundles from files alone.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#fafafa",
+  "theme_color": "#c00000",
+  "lang": "ko",
+  "icons": [
+    { "src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml" },
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

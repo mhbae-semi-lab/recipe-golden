@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>레시피 기준 관리</title>
+  <meta name="description" content="장비 레시피 파일만으로 기준 버전을 등록하고, 허용 오차를 반영해 장비별 차이를 보고, 1대 시범 → 전체 배포 묶음과 롤백 묶음을 만듭니다. 서버 없이 동작합니다.">
+  <meta name="theme-color" content="#c00000">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="stylesheet" href="vendor/pretendard/pretendard.css">
+  <link rel="stylesheet" href="app.css">
+</head>
+<body>
+  <a class="skip" href="#main" data-i18n="skip">본문으로 건너뛰기</a>
+  <header class="bar">
+    <div class="bar-in">
+      <strong class="app-name"><img src="icons/icon.svg" alt="" width="26" height="26"> <span data-i18n="appName">레시피 기준 관리</span></strong>
+      <label class="sr-only" for="recipe" data-i18n="recipe">레시피</label>
+      <select id="recipe" class="sel sm"></select>
+      <label class="sr-only" for="lang" data-i18n="language">언어</label>
+      <select id="lang" class="sel sm"><option value="ko">한국어</option><option value="en">English</option></select>
+      <button class="btn ghost sm icon" type="button" id="theme" data-i18n-attr="aria-label:theme;title:theme" aria-label="화면 테마">◐</button>
+      <button class="btn ghost sm" type="button" id="open-help" data-i18n="help">도움말</button>
+      <button class="btn ghost sm" type="button" id="open-settings" data-i18n="settings">설정</button>
+    </div>
+  </header>
+
+  <main class="page" id="main">
+    <section class="intro">
+      <h1 data-i18n="heroTitle">어느 장비가 기준과 다른가, 무엇이 언제 바뀌었나</h1>
+      <p data-i18n-html="heroText">장비 연동(SECS/GEM · MES) 없이 <b>레시피 파일만으로</b> 기준 버전을 정하고, 허용 오차 · 단위를 반영해 장비별 차이를 봅니다. 바꿀 때는 <b>1대 시범 → 전체</b> 배포 묶음과 <b>롤백 묶음</b>을 한 화면에서 만듭니다. 파일은 이 브라우저 밖으로 나가지 않습니다.</p>
+      <ol class="steps-nav">
+        <li><span>1</span><i data-i18n="step1">파일 가져오기 · 기준 등록</i></li>
+        <li><span>2</span><i data-i18n="step2">장비 × 버전 현황판 · Diff</i></li>
+        <li><span>3</span><i data-i18n="step3">검사 전 검증</i></li>
+        <li><span>4</span><i data-i18n="step4">비교 → 1대 시범 → 전환 · 롤백</i></li>
+      </ol>
+    </section>
+
+    <section class="panel source" id="drop" aria-labelledby="src-h">
+      <h2 id="src-h" class="sr-only" data-i18n="sourceTitle">파일 가져오기</h2>
+      <div class="src-row">
+        <div class="src-tabs">
+          <button type="button" id="load-sample" data-i18n="loadSample">예시 세트 (합성)</button>
+          <label class="file-btn"><span data-i18n="openFiles">레시피 파일 열기</span><input type="file" id="files" multiple accept=".json,.ini,.xml,.csv,.tsv,.txt,.cfg,.rcp,.conf,text/plain" class="sr-only"></label>
+          <label class="file-btn"><span data-i18n="openFolder">폴더 가져오기</span><input type="file" id="folder" webkitdirectory multiple class="sr-only"></label>
+          <button type="button" id="watch" hidden data-i18n="watch">폴더 연결 (변경 감시)</button>
+        </div>
+        <p class="drop-hint" data-i18n="dropHint">파일을 이 페이지에 끌어다 놓아도 됩니다</p>
+      </div>
+      <p id="watch-state" class="hint" hidden></p>
+      <div id="stats" class="stat-row" aria-live="polite"></div>
+    </section>
+
+    <section class="panel" aria-labelledby="bd-h">
+      <div class="panel-head">
+        <h2 id="bd-h"><span data-i18n="board">장비 × 버전 현황판</span> <small data-i18n="boardHint">● 지금 쓰는 버전 · ○ 예전에 썼던 버전 · 칸을 누르면 그 버전과 장비 파일의 Diff</small></h2>
+        <div class="legend"><span class="badge ok" data-i18n="vPass">통과</span><span class="badge within" data-i18n="vWithin">허용 오차 안</span><span class="badge block" data-i18n="vBlock">차단</span></div>
+      </div>
+      <div class="tbl-wrap"><table id="board" class="board"></table></div>
+      <p id="board-empty" class="empty" hidden data-i18n="boardEmpty">장비 파일이 없습니다. 장비 PC 에서 가져온 레시피 파일을 열고 '장비 현재 파일'로 등록하세요.</p>
+    </section>
+
+    <div class="work">
+      <section class="panel" aria-labelledby="bl-h">
+        <div class="panel-head"><h2 id="bl-h"><span data-i18n="baseline">기준</span> <small data-i18n="baselineHint">허용 오차 · 무시 항목. 바꾸려면 아래 '현장 검증 → 비교'에서 후보로 시작</small></h2></div>
+        <div id="baseline-body"></div>
+      </section>
+      <section class="panel" aria-labelledby="ck-h" id="check">
+        <div class="panel-head"><h2 id="ck-h"><span data-i18n="check">검사 전 검증</span> <small data-i18n="checkHint">검사를 시작하기 전에 그 장비가 쓸 파일을 기준과 비교해 통과 / 차단과 사유를 냅니다</small></h2></div>
+        <div class="row">
+          <label class="field inline"><span data-i18n="tool">장비</span> <select id="ck-tool"></select></label>
+          <label class="btn ghost sm file-like"><span data-i18n="ckPick">검사할 파일 고르기</span><input type="file" id="ck-file" class="sr-only"></label>
+          <button class="btn sm" type="button" id="ck-current" data-i18n="ckCurrent">장비 현재 파일로 검증</button>
+        </div>
+        <div id="ck-result" aria-live="polite"></div>
+      </section>
+    </div>
+
+    <section class="panel" aria-labelledby="df-h" id="diff">
+      <div class="panel-head">
+        <h2 id="df-h"><span data-i18n="diff">Diff</span> <small data-i18n="diffHint">항목별로 묶어 보여줍니다. 허용 오차 · 단위 환산 · 무시 항목 반영</small></h2>
+        <div class="filters">
+          <label class="sr-only" for="df-a">A</label><select id="df-a"></select>
+          <span aria-hidden="true">↔</span>
+          <label class="sr-only" for="df-b">B</label><select id="df-b"></select>
+          <label class="sr-only" for="df-filter" data-i18n="filter">보기</label>
+          <select id="df-filter"><option value="diff" data-i18n="fDiff">차이만</option><option value="block" data-i18n="fBlock">차단만</option><option value="all" data-i18n="fAll">전체</option></select>
+          <label class="chk"><input type="checkbox" id="df-rules" checked> <span data-i18n="useRules">기준 규칙 적용</span></label>
+        </div>
+      </div>
+      <div id="diff-sum" class="stat-row"></div>
+      <div id="diff-body"></div>
+    </section>
+
+    <section class="panel verify" id="verify" aria-labelledby="vf-h">
+      <div class="panel-head">
+        <h2 id="vf-h"><span data-i18n="verifyTitle">현장 검증 절차</span> <small data-i18n="verifyHint">바꾸기 전에 같은 장비 파일로 확인하고, 1대에서 먼저 돌려 보고, 언제든 되돌립니다</small></h2>
+        <span id="mode-badge" class="badge"></span>
+      </div>
+      <div class="vtabs" role="tablist" aria-labelledby="vf-h">
+        <button role="tab" type="button" id="vt-repro" aria-controls="vp-repro" aria-selected="true"><span>1</span><i data-i18n="vtRepro">재현</i></button>
+        <button role="tab" type="button" id="vt-compare" aria-controls="vp-compare" aria-selected="false" tabindex="-1"><span>2</span><i data-i18n="vtCompare">비교</i></button>
+        <button role="tab" type="button" id="vt-shadow" aria-controls="vp-shadow" aria-selected="false" tabindex="-1"><span>3</span><i data-i18n="vtShadow">Shadow (1대 시범)</i></button>
+        <button role="tab" type="button" id="vt-switch" aria-controls="vp-switch" aria-selected="false" tabindex="-1"><span>4</span><i data-i18n="vtSwitch">전환 · 롤백</i></button>
+      </div>
+      <div role="tabpanel" id="vp-repro" aria-labelledby="vt-repro" class="vpanel"></div>
+      <div role="tabpanel" id="vp-compare" aria-labelledby="vt-compare" class="vpanel" hidden></div>
+      <div role="tabpanel" id="vp-shadow" aria-labelledby="vt-shadow" class="vpanel" hidden></div>
+      <div role="tabpanel" id="vp-switch" aria-labelledby="vt-switch" class="vpanel" hidden></div>
+    </section>
+
+    <section class="panel" aria-labelledby="hs-h">
+      <div class="panel-head">
+        <h2 id="hs-h"><span data-i18n="history">이력</span> <small data-i18n="historyHint">버전 등록 · 장비 파일 변경 · 검증 · 기준 전환 · 롤백</small></h2>
+        <div class="filters"><label class="sr-only" for="hs-tool" data-i18n="tool">장비</label><select id="hs-tool"></select>
+          <label class="sr-only" for="hs-type" data-i18n="kind">종류</label><select id="hs-type"></select></div>
+      </div>
+      <div class="tbl-wrap"><table id="hist" class="hist"></table></div>
+      <div class="row"><button class="btn ghost sm" type="button" id="hs-more" hidden data-i18n="more">더 보기</button></div>
+    </section>
+  </main>
+
+  <footer class="foot"><span data-i18n="footer">예시 세트는 가상의 레시피 DEMO-SCAN 과 장비 EQ-01~03 입니다 (실제 장비 · 레시피와 무관). 데이터는 이 기기에만 저장됩니다.</span> <span id="version"></span></footer>
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+  <dialog id="import" aria-labelledby="im-h" class="wide-dlg">
+    <form method="dialog" class="dlg">
+      <h2 id="im-h" data-i18n="importTitle">가져올 파일</h2>
+      <p class="hint" data-i18n="importHint">파일마다 레시피와 등록 방식을 고릅니다. '버전'은 기준 후보가 되는 레시피, '장비 현재 파일'은 장비 PC 에서 가져온 지금 쓰는 파일입니다.</p>
+      <div class="tbl-wrap"><table id="im-table" class="im"></table></div>
+      <datalist id="dl-recipes"></datalist><datalist id="dl-tools"></datalist>
+      <p id="im-err" class="msg err" role="alert"></p>
+      <div class="row end">
+        <button class="btn ghost" value="cancel" type="submit" data-i18n="cancel">취소</button>
+        <button class="btn" id="im-ok" value="ok" type="button" data-i18n="importOk">가져오기</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="settings" aria-labelledby="st-h">
+    <form method="dialog" class="dlg">
+      <h2 id="st-h" data-i18n="settings">설정</h2>
+      <fieldset><legend data-i18n="pilotSection">1대 시범</legend>
+        <label class="field"><span data-i18n="pilotRuns">전환 전에 필요한 시범 장비 검증 통과 횟수</span><input id="s-runs" type="number" min="1" max="50" step="1"></label>
+      </fieldset>
+      <fieldset><legend data-i18n="dataSection">데이터</legend>
+        <div class="row">
+          <button class="btn ghost sm" type="button" id="backup-export" data-i18n="backupExport">백업 내보내기 (JSON)</button>
+          <label class="btn ghost sm file-like"><span data-i18n="backupImport">백업 가져오기</span><input type="file" id="backup-import" accept=".json,application/json" class="sr-only"></label>
+          <button class="btn ghost sm danger" type="button" id="reset-all" data-i18n="resetAll">이 기기의 데이터 모두 지우기</button>
+        </div>
+        <small data-i18n="dataHint">저장 위치: 이 브라우저의 IndexedDB (버전 · 장비 파일 · 기준 · 검증 기록 · 이력). 서버로 보내지 않습니다.</small>
+        <p class="hint" id="err-count"></p>
+      </fieldset>
+      <p id="settings-err" class="msg err" role="alert"></p>
+      <div class="row end">
+        <button class="btn ghost" value="cancel" type="submit" data-i18n="close">닫기</button>
+        <button class="btn" id="settings-save" value="save" type="submit" data-i18n="save">저장</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="help" aria-labelledby="hp-h" class="wide-dlg">
+    <form method="dialog" class="dlg">
+      <h2 id="hp-h" data-i18n="help">도움말</h2>
+      <div id="help-body" class="help"></div>
+      <div class="row end"><button class="btn" value="close" type="submit" data-i18n="close">닫기</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="onboard" aria-labelledby="ob-h">
+    <form method="dialog" class="dlg">
+      <h2 id="ob-h" data-i18n="obTitle">처음 오셨나요?</h2>
+      <ol class="ob">
+        <li data-i18n-html="ob1"><b>예시 세트</b>(레시피 1개 · 항목 40 · 버전 10 · 장비 3대)가 열려 있습니다. 현황판에서 EQ-03 이 왜 차단인지 눌러 보세요.</li>
+        <li data-i18n-html="ob2"><b>내 레시피</b>는 파일이나 폴더를 끌어다 놓습니다. JSON · INI · XML · CSV · key=value 를 읽습니다.</li>
+        <li data-i18n-html="ob3">기준을 바꿀 때는 '현장 검증'에서 <b>비교 → 1대 시범 → 전환</b> 순서로 갑니다. 롤백 묶음은 전환할 때 같이 만들어집니다.</li>
+      </ol>
+      <p class="hint" data-i18n="obPrivacy">파일은 이 브라우저 안에서만 읽고 이 기기에만 저장합니다. 외부 서버 · LLM 으로 보내지 않습니다.</p>
+      <div class="row end"><button class="btn" value="ok" type="submit" data-i18n="obStart">시작하기</button></div>
+    </form>
+  </dialog>
+
+  <script type="module" src="src/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,105 @@
+{
+  "steps": [
+    {
+      "step": "시작",
+      "baseline": "v8",
+      "tools": [
+        "EQ-01:통과",
+        "EQ-02:통과",
+        "EQ-03:차단"
+      ]
+    },
+    {
+      "step": "비교 (v8 vs v9, 같은 장비 파일)",
+      "flips": [
+        "EQ-01",
+        "EQ-02"
+      ],
+      "gateOk": false
+    },
+    {
+      "step": "1대 시범 시작 (EQ-01)",
+      "bundle": "DEMO-SCAN_pilot_v9_bmwqkeeeup.zip",
+      "files": 2,
+      "verify": true,
+      "gateOk": false
+    },
+    {
+      "step": "시범 장비 적용 · 검사 전 검증 3회",
+      "runs": [
+        true,
+        true,
+        true
+      ],
+      "shadow": [
+        {
+          "tool": "EQ-01",
+          "decides": "cand",
+          "pass": true,
+          "shadowPass": false,
+          "cls": "updated"
+        },
+        {
+          "tool": "EQ-02",
+          "decides": "base",
+          "pass": true,
+          "shadowPass": false,
+          "cls": "needsFile"
+        },
+        {
+          "tool": "EQ-03",
+          "decides": "base",
+          "pass": false,
+          "shadowPass": false,
+          "cls": null
+        }
+      ],
+      "gate": [
+        "pilot:true",
+        "applied:true",
+        "runs:true",
+        "noBlock:true",
+        "looser:true"
+      ],
+      "gateOk": true
+    },
+    {
+      "step": "전환 (기준 v9)",
+      "fleetTools": [
+        "EQ-02",
+        "EQ-03"
+      ],
+      "fleetVerify": true,
+      "rollbackTools": 3,
+      "rollbackVerify": true,
+      "fleetBytes": 7952,
+      "rollbackBytes": 6916
+    },
+    {
+      "step": "전체 적용 뒤",
+      "tools": [
+        "EQ-01:v9:통과",
+        "EQ-02:v9:통과",
+        "EQ-03:v9:통과"
+      ]
+    },
+    {
+      "step": "롤백 (기준 v8)",
+      "baseline": "v8",
+      "restoredToPreChangeFiles": "3/3"
+    },
+    {
+      "step": "변조 탐지 (대상 파일 1바이트)",
+      "ok": false,
+      "failed": [
+        "recipe/DEMO-SCAN_v9.json"
+      ]
+    }
+  ],
+  "summary": {
+    "gateAfterRuns": true,
+    "restored": "3/3",
+    "tamperDetected": true,
+    "historyEvents": 32
+  }
+}
